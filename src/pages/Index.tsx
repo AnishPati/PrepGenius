@@ -1,45 +1,113 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Brain, TrendingUp } from "lucide-react";
+import { motion } from "framer-motion";
+import { Zap, Brain, TrendingUp, Target, Star, ArrowRight } from "lucide-react";
+
+const features = [
+  { icon: Brain, title: "Adaptive Learning", desc: "AI tailors questions to your weak areas for maximum improvement" },
+  { icon: Target, title: "Daily Challenges", desc: "Build consistency with streak-based daily practice sessions" },
+  { icon: TrendingUp, title: "Track Progress", desc: "Visualize your improvement with detailed analytics and insights" },
+];
+
+const testimonials = [
+  { name: "Priya S.", role: "SDE at Google", text: "PrepAI helped me crack my dream job. The daily practice habit was a game changer." },
+  { name: "Rahul K.", role: "SDE at Amazon", text: "The adaptive quizzes focused exactly on my weak areas. Improved my score by 40%!" },
+  { name: "Anita M.", role: "SDE at Microsoft", text: "The gamification kept me motivated. 30-day streak and got 3 offers!" },
+];
 
 const Index = () => {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen flex flex-col">
-      <nav className="border-b border-border px-4 h-14 flex items-center">
-        <div className="mx-auto max-w-4xl w-full flex items-center gap-2 font-semibold">
-          <BookOpen className="h-5 w-5 text-primary" />
-          InterviewPrep AI
+      {/* Navbar */}
+      <nav className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="mx-auto max-w-5xl flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-2 font-bold text-foreground">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Zap className="h-4 w-4 text-primary-foreground" />
+            </div>
+            PrepAI
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding")}>
+            Sign In
+          </Button>
         </div>
       </nav>
 
-      <main className="flex-1 flex items-center justify-center px-4">
-        <div className="max-w-xl text-center space-y-6">
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
-            Your AI Interview Prep Agent
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-md mx-auto">
-            Daily adaptive quizzes. Personalized learning. Ace your next tech interview with confidence.
-          </p>
-          <Button size="lg" className="rounded-full px-8 text-base" onClick={() => navigate("/onboarding")}>
-            Get Started
-          </Button>
+      {/* Hero */}
+      <main className="flex-1">
+        <section className="flex items-center justify-center px-4 py-20 sm:py-32">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-2xl text-center space-y-6"
+          >
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+              <Star className="h-3 w-3" /> AI-Powered Interview Prep
+            </div>
+            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-foreground leading-tight">
+              Your AI Interview
+              <br />
+              <span className="text-primary">Coach</span>
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-md mx-auto">
+              Daily adaptive challenges. Real-time AI feedback. Track your progress and ace your next tech interview.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button size="lg" className="rounded-full px-8 text-base gap-2" onClick={() => navigate("/onboarding")}>
+                Start Your Prep <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+        </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-8">
-            {[
-              { icon: Brain, title: "Adaptive Quizzes", desc: "Questions tailored to your weak areas" },
-              { icon: BookOpen, title: "Instant Feedback", desc: "AI-powered evaluation of your answers" },
-              { icon: TrendingUp, title: "Track Progress", desc: "See your improvement over time" },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-lg border border-border p-4 text-left space-y-1.5">
-                <Icon className="h-5 w-5 text-primary" />
-                <p className="text-sm font-medium text-foreground">{title}</p>
-                <p className="text-xs text-muted-foreground">{desc}</p>
-              </div>
+        {/* Features */}
+        <section className="px-4 pb-20">
+          <div className="mx-auto max-w-4xl grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {features.map(({ icon: Icon, title, desc }, i) => (
+              <motion.div
+                key={title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + i * 0.1 }}
+                whileHover={{ y: -4 }}
+                className="rounded-2xl border border-border bg-card p-6 space-y-3 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+                <p className="font-semibold text-foreground">{title}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </section>
+
+        {/* Testimonials */}
+        <section className="px-4 pb-20">
+          <div className="mx-auto max-w-4xl space-y-8">
+            <h2 className="text-2xl font-bold text-center text-foreground">Loved by Engineers</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {testimonials.map((t, i) => (
+                <motion.div
+                  key={t.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 + i * 0.1 }}
+                  className="rounded-2xl border border-border bg-card p-5 space-y-3"
+                >
+                  <p className="text-sm text-muted-foreground leading-relaxed">"{t.text}"</p>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.role}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
