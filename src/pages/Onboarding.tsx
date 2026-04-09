@@ -1,23 +1,27 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import TagInput from "@/components/TagInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { onboardUser } from "@/lib/api";
-import { Loader2, ArrowRight, ArrowLeft, Zap, Rocket } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, Zap, Rocket, Building2, Briefcase, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const BRANCHES = ["Computer Science", "Information Technology", "Electronics", "Electrical", "Mechanical", "Civil", "Other"];
 
+const COMPANIES = ["Google", "Amazon", "Microsoft", "TCS", "Infosys", "Other"];
+const ROLES = ["SDE", "Data Analyst", "Core Engineer", "Product Manager", "Other"];
+
 const STEPS = [
   { title: "Personal Info", subtitle: "Let's get to know you" },
   { title: "Academic Details", subtitle: "Tell us about your background" },
-  { title: "Goals", subtitle: "What are you preparing for?" },
+  { title: "Career Target", subtitle: "What role are you aiming for?" },
+  { title: "Confirmation", subtitle: "Review your prep plan" },
 ];
 
 const Onboarding = () => {
@@ -28,20 +32,41 @@ const Onboarding = () => {
   const [email, setEmail] = useState("");
   const [branch, setBranch] = useState("");
   const [cgpa, setCgpa] = useState("");
-  const [companies, setCompanies] = useState<string[]>([]);
+  const [company, setCompany] = useState("");
+  const [customCompany, setCustomCompany] = useState("");
+  const [role, setRole] = useState("");
+  const [customRole, setCustomRole] = useState("");
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
 
   const progress = ((step + 1) / STEPS.length) * 100;
+
+  const resolvedCompany = company === "Other" ? customCompany : company;
+  const resolvedRole = role === "Other" ? customRole : role;
 
   const canNext = () => {
     if (step === 0) return name.trim() && email.trim();
     if (step === 1) return branch && cgpa;
+    if (step === 2) {
+      const companyValid = company && (company !== "Other" || customCompany.trim());
+      const roleValid = role && (role !== "Other" || customRole.trim());
+      return companyValid && roleValid;
+    }
     return true;
   };
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      await onboardUser({ name, email, branch, cgpa: parseFloat(cgpa), targetCompanies: companies });
+      await onboardUser({
+        name,
+        email,
+        branch,
+        cgpa: parseFloat(cgpa),
+        targetCompanies: [resolvedCompany],
+        company: resolvedCompany,
+        role: resolvedRole,
+        difficulty,
+      });
       toast.success("Profile created!");
       navigate("/dashboard");
     } catch {
@@ -76,9 +101,9 @@ const Onboarding = () => {
             <AnimatePresence mode="wait">
               <motion.div
                 key={step}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: 20, scale: 0.98 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -20, scale: 0.98 }}
                 transition={{ duration: 0.2 }}
                 className="space-y-5"
               >
@@ -87,6 +112,7 @@ const Onboarding = () => {
                   <p className="text-sm text-muted-foreground">{STEPS[step].subtitle}</p>
                 </div>
 
+                {/* Step 0: Basic Info */}
                 {step === 0 && (
                   <>
                     <div className="space-y-1.5">
@@ -100,6 +126,7 @@ const Onboarding = () => {
                   </>
                 )}
 
+                {/* Step 1: Academic Info */}
                 {step === 1 && (
                   <>
                     <div className="space-y-1.5">
@@ -118,18 +145,83 @@ const Onboarding = () => {
                   </>
                 )}
 
+                {/* Step 2: Career Target */}
                 {step === 2 && (
                   <>
                     <div className="space-y-1.5">
-                      <Label>Target Companies</Label>
-                      <TagInput tags={companies} onChange={setCompanies} placeholder="e.g. Google, Amazon — press Enter" />
+                      <Label className="flex items-center gap-1.5">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        Target Company
+                      </Label>
+                      <Select value={company} onValueChange={setCompany}>
+                        <SelectTrigger><SelectValue placeholder="Select company" /></SelectTrigger>
+                        <SelectContent>
+                          {COMPANIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      {company === "Other" && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="pt-1.5">
+                          <Input value={customCompany} onChange={(e) => setCustomCompany(e.target.value)} placeholder="Enter company name" />
+                        </motion.div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1.5">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        Job Role
+                      </Label>
+                      <Select value={role} onValueChange={setRole}>
+                        <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                        <SelectContent>
+                          {ROLES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      {role === "Other" && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="pt-1.5">
+                          <Input value={customRole} onChange={(e) => setCustomRole(e.target.value)} placeholder="Enter role title" />
+                        </motion.div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Target Difficulty</Label>
+                      <RadioGroup value={difficulty} onValueChange={(v) => setDifficulty(v as "easy" | "medium" | "hard")} className="flex gap-4">
+                        {(["easy", "medium", "hard"] as const).map((d) => (
+                          <div key={d} className="flex items-center gap-1.5">
+                            <RadioGroupItem value={d} id={`diff-${d}`} />
+                            <Label htmlFor={`diff-${d}`} className="capitalize cursor-pointer text-sm font-normal">{d}</Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  </>
+                )}
+
+                {/* Step 3: Confirmation */}
+                {step === 3 && (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl bg-primary/5 border border-primary/10 p-5 space-y-3">
+                      <CheckCircle2 className="h-8 w-8 text-primary mx-auto" />
+                      <p className="text-center text-sm font-medium text-foreground">
+                        You are preparing for
+                      </p>
+                      <p className="text-center text-lg font-bold text-primary">
+                        {resolvedCompany} — {resolvedRole}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-2 border-t border-primary/10">
+                        <div><span className="font-medium text-foreground">Branch:</span> {branch}</div>
+                        <div><span className="font-medium text-foreground">CGPA:</span> {cgpa}</div>
+                        <div><span className="font-medium text-foreground">Difficulty:</span> <span className="capitalize">{difficulty}</span></div>
+                        <div><span className="font-medium text-foreground">Email:</span> {email}</div>
+                      </div>
                     </div>
                     <div className="rounded-2xl bg-primary/5 border border-primary/10 p-4 text-center space-y-2">
                       <Rocket className="h-8 w-8 text-primary mx-auto" />
                       <p className="text-sm font-medium text-foreground">Your personalized AI prep plan is ready 🚀</p>
-                      <p className="text-xs text-muted-foreground">Complete setup to unlock your dashboard</p>
+                      <p className="text-xs text-muted-foreground">Hit the button below to start your journey</p>
                     </div>
-                  </>
+                  </div>
                 )}
               </motion.div>
             </AnimatePresence>
@@ -145,7 +237,7 @@ const Onboarding = () => {
               ) : (
                 <Button onClick={handleSubmit} disabled={loading} size="sm">
                   {loading && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-                  {loading ? "Setting up..." : "Get Started"}
+                  {loading ? "Setting up..." : "Start My Preparation 🚀"}
                 </Button>
               )}
             </div>
