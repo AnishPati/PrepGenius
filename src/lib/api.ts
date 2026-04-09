@@ -3,10 +3,20 @@ import type { UserProfile, QuizQuestion, QuizAnswer, Evaluation, ProgressData, G
 const MOCK_DELAY = 600;
 
 const mockQuiz: QuizQuestion[] = [
-  { id: "1", text: "Explain the difference between a stack and a queue. When would you use each?", topic: "Data Structures", difficulty: "easy" },
-  { id: "2", text: "What is the time complexity of binary search? Explain why.", topic: "Algorithms", difficulty: "medium" },
-  { id: "3", text: "Describe the SOLID principles in object-oriented programming.", topic: "OOP", difficulty: "medium" },
-  { id: "4", text: "What is a deadlock? How can it be prevented?", topic: "Operating Systems", difficulty: "hard" },
+  // Aptitude (3)
+  { id: "1", text: "A train travels 120 km in 2 hours. What is its average speed?", topic: "Aptitude", difficulty: "easy" },
+  { id: "2", text: "If 5 workers can complete a task in 12 days, how many days will 10 workers take?", topic: "Aptitude", difficulty: "easy" },
+  { id: "3", text: "A product is sold at 20% profit. If cost price is ₹500, what is the selling price?", topic: "Aptitude", difficulty: "medium" },
+  // Technical / DSA (4)
+  { id: "4", text: "Explain the difference between a stack and a queue. When would you use each?", topic: "Technical / DSA", difficulty: "easy" },
+  { id: "5", text: "What is the time complexity of binary search? Explain why.", topic: "Technical / DSA", difficulty: "medium" },
+  { id: "6", text: "How does a hash map handle collisions? Describe two common strategies.", topic: "Technical / DSA", difficulty: "medium" },
+  { id: "7", text: "Write the approach for finding the longest common subsequence of two strings.", topic: "Technical / DSA", difficulty: "hard" },
+  // Core Subject (2)
+  { id: "8", text: "What is a deadlock? How can it be prevented?", topic: "Core Subject", difficulty: "hard" },
+  { id: "9", text: "Describe the SOLID principles in object-oriented programming.", topic: "Core Subject", difficulty: "medium" },
+  // Behavioral (1)
+  { id: "10", text: "Tell me about a time you disagreed with a teammate. How did you handle it?", topic: "Behavioral", difficulty: "easy" },
 ];
 
 const mockEvaluation: Evaluation = {
