@@ -4,6 +4,9 @@ export interface UserProfile {
   branch: string;
   cgpa: number;
   targetCompanies: string[];
+  company: string;
+  role: string;
+  difficulty: "easy" | "medium" | "hard";
 }
 
 export interface QuizQuestion {
