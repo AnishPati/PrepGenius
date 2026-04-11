@@ -15,19 +15,56 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchQuiz, fetchEvaluation, fetchProgress, fetchGamification, submitAnswers, getUserName, getGreeting } from "@/lib/api";
-import type { QuizQuestion, Evaluation, ProgressData, GamificationData } from "@/types";
-import { Loader2, Flame, Zap, Trophy, Briefcase, Brain, Code, BookOpen, MessageSquare } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  fetchQuiz,
+  fetchEvaluation,
+  fetchProgress,
+  fetchGamification,
+  submitAnswers,
+  getUserName,
+  getGreeting,
+  getUserId,
+  getCurrentQuizId,
+} from "@/lib/api";
+import type {
+  QuizQuestion,
+  Evaluation,
+  ProgressData,
+  GamificationData,
+} from "@/types";
+import {
+  Loader2,
+  Flame,
+  Zap,
+  Trophy,
+  Briefcase,
+  Brain,
+  Code,
+  BookOpen,
+  MessageSquare,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 
 const SECTION_META: Record<string, { icon: typeof Brain; label: string }> = {
-  "Aptitude": { icon: Brain, label: "Aptitude" },
+  Aptitude: { icon: Brain, label: "Aptitude" },
   "Technical / DSA": { icon: Code, label: "Technical / DSA" },
   "Core Subject": { icon: BookOpen, label: "Core Subject" },
-  "Behavioral": { icon: MessageSquare, label: "Behavioral" },
+  Behavioral: { icon: MessageSquare, label: "Behavioral" },
 };
 
-const SECTION_ORDER = ["Aptitude", "Technical / DSA", "Core Subject", "Behavioral"];
+const SECTION_ORDER = [
+  "Aptitude",
+  "Technical / DSA",
+  "Core Subject",
+  "Behavioral",
+];
 
 function getCompanyRole(): { company: string; role: string } {
   try {
@@ -45,10 +82,17 @@ const Dashboard = () => {
   const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [progress, setProgress] = useState<ProgressData | null>(null);
-  const [gamification, setGamification] = useState<GamificationData | null>(null);
+  const [gamification, setGamification] = useState<GamificationData | null>(
+    null,
+  );
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [quizId, setQuizId] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [scoreTrend, setScoreTrend] = useState<Array<{ d: string; s: number }>>(
+    [],
+  );
+  const userId = getUserId();
 
   const userName = getUserName();
   const greeting = getGreeting();
@@ -56,14 +100,33 @@ const Dashboard = () => {
 
   useEffect(() => {
     const load = async () => {
+      if (!userId) {
+        toast.error("Please complete onboarding first");
+        navigate("/onboarding");
+        return;
+      }
+
       try {
         const [q, e, p, g] = await Promise.all([
-          fetchQuiz(), fetchEvaluation(), fetchProgress(), fetchGamification(),
+          fetchQuiz(userId),
+          fetchEvaluation(userId),
+          fetchProgress(userId),
+          fetchGamification(userId),
         ]);
         setQuiz(q);
         setEvaluation(e);
         setProgress(p);
         setGamification(g);
+        setQuizId(getCurrentQuizId());
+        const base = Math.max(0, Math.min(100, e.score));
+        setScoreTrend([
+          { d: "M", s: Math.max(0, base - 10) },
+          { d: "T", s: Math.max(0, base - 8) },
+          { d: "W", s: Math.max(0, base - 6) },
+          { d: "T", s: Math.max(0, base - 4) },
+          { d: "F", s: Math.max(0, base - 2) },
+          { d: "S", s: base },
+        ]);
       } catch {
         toast.error("Failed to load dashboard data");
       } finally {
@@ -71,11 +134,11 @@ const Dashboard = () => {
       }
     };
     load();
-  }, []);
+  }, [navigate, userId]);
 
   const completedCount = useMemo(
     () => quiz.filter((q) => answers[q.id]?.trim()).length,
-    [quiz, answers]
+    [quiz, answers],
   );
 
   const groupedQuestions = useMemo(() => {
@@ -83,7 +146,10 @@ const Dashboard = () => {
     for (const q of quiz) {
       (groups[q.topic] ??= []).push(q);
     }
-    return SECTION_ORDER.filter((s) => groups[s]).map((s) => ({ section: s, questions: groups[s] }));
+    return SECTION_ORDER.filter((s) => groups[s]).map((s) => ({
+      section: s,
+      questions: groups[s],
+    }));
   }, [quiz]);
 
   // Running index for question numbering
@@ -94,9 +160,23 @@ const Dashboard = () => {
       toast.error("Please answer at least one question");
       return;
     }
+    if (!userId) {
+      toast.error("Missing user session. Please onboard again.");
+      navigate("/onboarding");
+      return;
+    }
+    if (!quizId) {
+      toast.error("Missing quiz session. Refresh and try again.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await submitAnswers(quiz.map((q) => ({ questionId: q.id, answer: answers[q.id] || "" })));
+      await submitAnswers(
+        userId,
+        quizId,
+        quiz.map((q) => ({ questionId: q.id, answer: answers[q.id] || "" })),
+      );
       navigate("/success");
     } catch {
       toast.error("Failed to submit answers");
@@ -118,11 +198,6 @@ const Dashboard = () => {
     );
   }
 
-  const scoreTrend = [
-    { d: "M", s: 65 }, { d: "T", s: 70 }, { d: "W", s: 68 },
-    { d: "T", s: 75 }, { d: "F", s: 78 }, { d: "S", s: 82 },
-  ];
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -141,23 +216,35 @@ const Dashboard = () => {
               <div className="flex items-center gap-1.5 mt-1">
                 <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  Preparing for <span className="font-medium text-foreground">{company} — {role}</span>
+                  Preparing for{" "}
+                  <span className="font-medium text-foreground">
+                    {company} — {role}
+                  </span>
                 </span>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Ready for today's challenge?</p>
+              <p className="text-sm text-muted-foreground">
+                Ready for today's challenge?
+              </p>
             )}
           </div>
           <div className="flex items-center gap-4">
             {gamification && (
-              <StreakBadge streak={gamification.streak} calendar={gamification.streakCalendar} />
+              <StreakBadge
+                streak={gamification.streak}
+                calendar={gamification.streakCalendar}
+              />
             )}
           </div>
         </motion.div>
 
         {/* XP + Gamification */}
         {gamification && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
             <Card>
               <CardContent className="pt-6">
                 <XPProgressBar
@@ -172,7 +259,9 @@ const Dashboard = () => {
                     <Flame className="h-3.5 w-3.5 text-destructive" />
                     Keep your streak alive — complete today's challenge!
                   </div>
-                  <Badge variant="secondary" className="text-xs">+10 XP per challenge</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    +10 XP per challenge
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -185,13 +274,22 @@ const Dashboard = () => {
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-primary" />
               <div>
-                <h2 className="text-lg font-semibold text-foreground">Today's 10-Question Challenge</h2>
-                <p className="text-xs text-muted-foreground">Aptitude • Technical • Core • Behavioral</p>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Today's 10-Question Challenge
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Aptitude • Technical • Core • Behavioral
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-foreground">{completedCount} / {quiz.length}</span>
-              <Progress value={(completedCount / Math.max(quiz.length, 1)) * 100} className="h-2 w-32" />
+              <span className="text-sm font-medium text-foreground">
+                {completedCount} / {quiz.length}
+              </span>
+              <Progress
+                value={(completedCount / Math.max(quiz.length, 1)) * 100}
+                className="h-2 w-32"
+              />
             </div>
           </div>
 
@@ -204,8 +302,12 @@ const Dashboard = () => {
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <Icon className="h-4 w-4 text-primary" />
                     {meta?.label ?? section}
-                    <Badge variant="outline" className="text-xs font-normal ml-auto">
-                      {questions.length} {questions.length === 1 ? "question" : "questions"}
+                    <Badge
+                      variant="outline"
+                      className="text-xs font-normal ml-auto"
+                    >
+                      {questions.length}{" "}
+                      {questions.length === 1 ? "question" : "questions"}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -220,7 +322,9 @@ const Dashboard = () => {
                         topic={q.topic}
                         difficulty={q.difficulty}
                         value={answers[q.id] || ""}
-                        onChange={(v) => setAnswers((prev) => ({ ...prev, [q.id]: v }))}
+                        onChange={(v) =>
+                          setAnswers((prev) => ({ ...prev, [q.id]: v }))
+                        }
                       />
                     );
                   })}
@@ -248,7 +352,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {evaluation && (
             <ScoreCard
-              score={(evaluation.score / 10)}
+              score={evaluation.score / 10}
               maxScore={10}
               trend={evaluation.trend}
               label="Score (10-question evaluation)"
@@ -258,10 +362,21 @@ const Dashboard = () => {
             <div className="h-32">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={scoreTrend}>
-                  <XAxis dataKey="d" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <XAxis
+                    dataKey="d"
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
                   <YAxis hide domain={[50, 100]} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="s" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                  <Line
+                    type="monotone"
+                    dataKey="s"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={false}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -270,11 +385,19 @@ const Dashboard = () => {
 
         {/* Evaluation feedback */}
         {evaluation && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
             <Card>
               <CardContent className="pt-6 space-y-3">
-                <p className="text-sm font-medium text-foreground">AI Feedback</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">{evaluation.feedback}</p>
+                <p className="text-sm font-medium text-foreground">
+                  AI Feedback
+                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {evaluation.feedback}
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {evaluation.weakTopics.map((t) => (
                     <TopicTag key={t} topic={t} status="weak" />
@@ -288,24 +411,38 @@ const Dashboard = () => {
         {/* Weekly Activity + Progress */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ChartCard title="Weekly Activity">
-            <HeatmapGrid data={[
-              { day: "Mon", intensity: 3 }, { day: "Tue", intensity: 4 },
-              { day: "Wed", intensity: 2 }, { day: "Thu", intensity: 0 },
-              { day: "Fri", intensity: 3 }, { day: "Sat", intensity: 4 },
-              { day: "Sun", intensity: 1 },
-            ]} />
+            <HeatmapGrid
+              data={(
+                gamification?.streakCalendar || [
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                ]
+              ).map((active, idx) => ({
+                day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][idx],
+                intensity: active ? 4 : 0,
+              }))}
+            />
           </ChartCard>
 
           {progress && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">Topic Mastery</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  Topic Mastery
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {progress.topicMastery.map((tm) => (
                   <div key={tm.topic} className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span className="text-foreground font-medium">{tm.topic}</span>
+                      <span className="text-foreground font-medium">
+                        {tm.topic}
+                      </span>
                       <TopicTag topic={`${tm.mastery}%`} status={tm.status} />
                     </div>
                     <Progress value={tm.mastery} className="h-1.5" />
@@ -321,8 +458,12 @@ const Dashboard = () => {
           <Card>
             <CardContent className="pt-6 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">Overall Readiness</p>
-                <span className="text-2xl font-bold text-primary">{progress.overallScore}%</span>
+                <p className="text-sm font-semibold text-foreground">
+                  Overall Readiness
+                </p>
+                <span className="text-2xl font-bold text-primary">
+                  {progress.overallScore}%
+                </span>
               </div>
               <Progress value={progress.overallScore} className="h-3" />
             </CardContent>

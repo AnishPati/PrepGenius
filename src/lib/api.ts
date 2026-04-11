@@ -1,125 +1,304 @@
-import type { UserProfile, QuizQuestion, QuizAnswer, Evaluation, ProgressData, GamificationData, AnalyticsData } from "@/types";
+import type {
+  UserProfile,
+  QuizQuestion,
+  QuizAnswer,
+  Evaluation,
+  ProgressData,
+  GamificationData,
+  AnalyticsData,
+  TopicMastery,
+} from "@/types";
 
-const MOCK_DELAY = 600;
+const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"
+).replace(/\/$/, "");
 
-const mockQuiz: QuizQuestion[] = [
-  // Aptitude (3)
-  { id: "1", text: "A train travels 120 km in 2 hours. What is its average speed?", topic: "Aptitude", difficulty: "easy" },
-  { id: "2", text: "If 5 workers can complete a task in 12 days, how many days will 10 workers take?", topic: "Aptitude", difficulty: "easy" },
-  { id: "3", text: "A product is sold at 20% profit. If cost price is ₹500, what is the selling price?", topic: "Aptitude", difficulty: "medium" },
-  // Technical / DSA (4)
-  { id: "4", text: "Explain the difference between a stack and a queue. When would you use each?", topic: "Technical / DSA", difficulty: "easy" },
-  { id: "5", text: "What is the time complexity of binary search? Explain why.", topic: "Technical / DSA", difficulty: "medium" },
-  { id: "6", text: "How does a hash map handle collisions? Describe two common strategies.", topic: "Technical / DSA", difficulty: "medium" },
-  { id: "7", text: "Write the approach for finding the longest common subsequence of two strings.", topic: "Technical / DSA", difficulty: "hard" },
-  // Core Subject (2)
-  { id: "8", text: "What is a deadlock? How can it be prevented?", topic: "Core Subject", difficulty: "hard" },
-  { id: "9", text: "Describe the SOLID principles in object-oriented programming.", topic: "Core Subject", difficulty: "medium" },
-  // Behavioral (1)
-  { id: "10", text: "Tell me about a time you disagreed with a teammate. How did you handle it?", topic: "Behavioral", difficulty: "easy" },
-];
-
-const mockEvaluation: Evaluation = {
-  score: 82,
-  feedback: "Strong understanding of data structures and algorithms. Your OOP explanation was thorough. Focus more on OS concepts and concurrency patterns for improvement.",
-  weakTopics: ["Operating Systems", "Concurrency", "System Design"],
-  trend: "improving",
+type ApiError = {
+  error?: string;
 };
 
-const mockProgress: ProgressData = {
-  weakTopics: ["Operating Systems", "Concurrency", "System Design", "Dynamic Programming"],
-  overallScore: 72,
-  topicMastery: [
-    { topic: "Data Structures", mastery: 88, status: "strong" },
-    { topic: "Algorithms", mastery: 75, status: "moderate" },
-    { topic: "OOP", mastery: 82, status: "strong" },
-    { topic: "Operating Systems", mastery: 45, status: "weak" },
-    { topic: "System Design", mastery: 38, status: "weak" },
-    { topic: "Dynamic Programming", mastery: 52, status: "moderate" },
-  ],
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const err = (await res.json()) as ApiError;
+      if (err.error) message = err.error;
+    } catch {
+      // Keep fallback message when response body is not JSON.
+    }
+    throw new Error(message);
+  }
+
+  return res.json() as Promise<T>;
+}
+
+type BackendQuestion = {
+  question_id?: string;
+  id?: string;
+  question?: string;
+  text?: string;
+  topic?: string;
+  difficulty?: "easy" | "medium" | "hard";
 };
 
-const mockGamification: GamificationData = {
-  xp: 240,
-  level: 3,
-  xpForNextLevel: 500,
-  xpAtCurrentLevel: 250,
-  streak: 7,
-  xpEarnedToday: 20,
-  streakCalendar: [true, true, true, false, true, true, true],
+type BackendQuizResponse = {
+  quiz_id?: string;
+  questions?: BackendQuestion[];
 };
 
-const mockAnalytics: AnalyticsData = {
-  averageScore: 76,
-  improvementRate: 15,
-  scoreTrend: [
-    { date: "Mon", score: 65 },
-    { date: "Tue", score: 70 },
-    { date: "Wed", score: 68 },
-    { date: "Thu", score: 75 },
-    { date: "Fri", score: 78 },
-    { date: "Sat", score: 82 },
-    { date: "Sun", score: 85 },
-  ],
-  topicMastery: mockProgress.topicMastery,
-  accuracyCorrect: 73,
-  accuracyIncorrect: 27,
-  weeklyActivity: [
-    { day: "Mon", intensity: 3 },
-    { day: "Tue", intensity: 4 },
-    { day: "Wed", intensity: 2 },
-    { day: "Thu", intensity: 0 },
-    { day: "Fri", intensity: 3 },
-    { day: "Sat", intensity: 4 },
-    { day: "Sun", intensity: 1 },
-  ],
-  insights: [
-    "You struggle with Dynamic Programming — try more practice problems",
-    "Your accuracy improved by 15% this week",
-    "Operating Systems needs more attention — review process scheduling",
-    "Great consistency! 7-day streak maintained",
-  ],
+type BackendEvaluationResponse = {
+  overall_score?: number;
+  weak_topics?: string[];
+  skill_gaps?: string[];
+  feedback?: string;
 };
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+type BackendProfileResponse = {
+  weak_topics?: string[];
+  strong_topics?: string[];
+  progress_score?: number;
+};
+
+function normalizeDifficulty(
+  value: string | undefined,
+): "easy" | "medium" | "hard" {
+  if (value === "easy" || value === "hard") return value;
+  return "medium";
 }
 
-export async function onboardUser(profile: UserProfile): Promise<{ success: boolean }> {
-  await delay(MOCK_DELAY);
-  localStorage.setItem("user_profile", JSON.stringify(profile));
-  return { success: true };
+function profileFromStorage(): Partial<UserProfile> & { user_id?: string } {
+  try {
+    const raw = localStorage.getItem("user_profile");
+    if (!raw) return {};
+    return JSON.parse(raw) as Partial<UserProfile> & { user_id?: string };
+  } catch {
+    return {};
+  }
 }
 
-export async function fetchQuiz(): Promise<QuizQuestion[]> {
-  await delay(MOCK_DELAY);
-  return mockQuiz;
+function deriveTrend(score: number): "improving" | "declining" | "stable" {
+  if (score >= 75) return "improving";
+  if (score <= 45) return "declining";
+  return "stable";
 }
 
-export async function submitAnswers(answers: QuizAnswer[]): Promise<{ success: boolean }> {
-  await delay(MOCK_DELAY);
-  console.log("Submitted answers:", answers);
-  return { success: true };
+function mergeWeakStrongTopics(
+  weak: string[],
+  strong: string[],
+): TopicMastery[] {
+  const weakSet = new Set(weak);
+  const strongSet = new Set(strong);
+  const topics = new Set([...weakSet, ...strongSet]);
+
+  return Array.from(topics).map((topic) => {
+    if (weakSet.has(topic)) {
+      return { topic, mastery: 35, status: "weak" as const };
+    }
+    if (strongSet.has(topic)) {
+      return { topic, mastery: 85, status: "strong" as const };
+    }
+    return { topic, mastery: 60, status: "moderate" as const };
+  });
 }
 
-export async function fetchEvaluation(): Promise<Evaluation> {
-  await delay(MOCK_DELAY);
-  return mockEvaluation;
+function buildGamification(progressScore: number): GamificationData {
+  const xp = Math.max(0, Math.round(progressScore * 5));
+  const levelInfo = getLevelInfo(xp);
+  const streak = Math.min(7, Math.max(0, Math.round(progressScore / 15)));
+  const streakCalendar = Array.from(
+    { length: 7 },
+    (_, idx) => idx >= 7 - streak,
+  );
+
+  return {
+    xp,
+    level: levelInfo.level,
+    xpForNextLevel: levelInfo.max,
+    xpAtCurrentLevel: levelInfo.min,
+    streak,
+    xpEarnedToday: Math.max(5, Math.round(progressScore / 8)),
+    streakCalendar,
+  };
 }
 
-export async function fetchProgress(): Promise<ProgressData> {
-  await delay(MOCK_DELAY);
-  return mockProgress;
+export async function onboardUser(
+  profile: UserProfile,
+): Promise<{ success: boolean }> {
+  const body = {
+    name: profile.name,
+    email: profile.email,
+    branch: profile.branch,
+    cgpa: String(profile.cgpa),
+    company: profile.company,
+    role: profile.role,
+    difficulty: profile.difficulty,
+    question_count: 10,
+  };
+
+  const result = await apiFetch<{ success: boolean; user_id?: string }>(
+    "/api/onboard",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
+
+  localStorage.setItem(
+    "user_profile",
+    JSON.stringify({
+      ...profile,
+      user_id: result.user_id || profile.email,
+    }),
+  );
+
+  return { success: !!result.success };
 }
 
-export async function fetchGamification(): Promise<GamificationData> {
-  await delay(MOCK_DELAY);
-  return mockGamification;
+export function getUserId(): string {
+  const profile = profileFromStorage();
+  return String(profile.user_id || profile.email || "").trim();
 }
 
-export async function fetchAnalytics(): Promise<AnalyticsData> {
-  await delay(MOCK_DELAY);
-  return mockAnalytics;
+export function getCurrentQuizId(): string {
+  return (localStorage.getItem("current_quiz_id") || "").trim();
+}
+
+export async function fetchQuiz(userId: string): Promise<QuizQuestion[]> {
+  const data = await apiFetch<BackendQuizResponse>(
+    `/api/quiz?user_id=${encodeURIComponent(userId)}`,
+  );
+  if (data.quiz_id) {
+    localStorage.setItem("current_quiz_id", data.quiz_id);
+  }
+
+  return (data.questions || [])
+    .map((q) => ({
+      id: String(q.question_id || q.id || ""),
+      text: String(q.question || q.text || ""),
+      topic: String(q.topic || "General"),
+      difficulty: normalizeDifficulty(q.difficulty),
+    }))
+    .filter((q) => q.id && q.text);
+}
+
+export async function submitAnswers(
+  userId: string,
+  quizId: string,
+  answers: QuizAnswer[],
+): Promise<{ success: boolean }> {
+  const payload = {
+    user_id: userId,
+    quiz_id: quizId,
+    answers: answers.map((a) => ({
+      question_id: a.questionId,
+      answer: a.answer,
+    })),
+  };
+
+  const result = await apiFetch<{ success: boolean }>("/api/submit", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  return { success: !!result.success };
+}
+
+export async function fetchEvaluation(userId: string): Promise<Evaluation> {
+  const data = await apiFetch<BackendEvaluationResponse>(
+    `/api/evaluation?user_id=${encodeURIComponent(userId)}`,
+  );
+
+  const score = typeof data.overall_score === "number" ? data.overall_score : 0;
+  const weakTopics = Array.isArray(data.weak_topics) ? data.weak_topics : [];
+
+  return {
+    score,
+    feedback: String(data.feedback || "No feedback yet."),
+    weakTopics,
+    trend: deriveTrend(score),
+  };
+}
+
+export async function fetchProgress(userId: string): Promise<ProgressData> {
+  const data = await apiFetch<BackendProfileResponse>(
+    `/api/profile?user_id=${encodeURIComponent(userId)}`,
+  );
+
+  const weakTopics = Array.isArray(data.weak_topics) ? data.weak_topics : [];
+  const strongTopics = Array.isArray(data.strong_topics)
+    ? data.strong_topics
+    : [];
+  const overallScore =
+    typeof data.progress_score === "number" ? data.progress_score : 0;
+
+  return {
+    weakTopics,
+    overallScore,
+    topicMastery: mergeWeakStrongTopics(weakTopics, strongTopics),
+  };
+}
+
+export async function fetchGamification(
+  userId: string,
+): Promise<GamificationData> {
+  const progress = await fetchProgress(userId);
+  return buildGamification(progress.overallScore);
+}
+
+export async function fetchAnalytics(userId: string): Promise<AnalyticsData> {
+  const [evaluation, progress] = await Promise.all([
+    fetchEvaluation(userId),
+    fetchProgress(userId),
+  ]);
+
+  const score = Math.max(0, Math.min(100, evaluation.score));
+  const avg = Math.round((progress.overallScore + score) / 2);
+  const weakCount = progress.topicMastery.filter(
+    (t) => t.status === "weak",
+  ).length;
+  const totalTopics = Math.max(progress.topicMastery.length, 1);
+  const improvementRate = Math.max(
+    0,
+    Math.min(100, Math.round(((totalTopics - weakCount) / totalTopics) * 100)),
+  );
+  const weeklyActivity = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+    (day, index) => ({
+      day,
+      intensity:
+        index < 5
+          ? Math.max(1, Math.min(4, Math.round(avg / 25)))
+          : Math.max(0, Math.min(4, Math.round(score / 25))),
+    }),
+  );
+
+  return {
+    averageScore: avg,
+    improvementRate,
+    scoreTrend: [
+      { date: "Mon", score: Math.max(0, score - 10) },
+      { date: "Tue", score: Math.max(0, score - 8) },
+      { date: "Wed", score: Math.max(0, score - 6) },
+      { date: "Thu", score: Math.max(0, score - 4) },
+      { date: "Fri", score: Math.max(0, score - 2) },
+      { date: "Sat", score },
+      { date: "Sun", score },
+    ],
+    topicMastery: progress.topicMastery,
+    accuracyCorrect: score,
+    accuracyIncorrect: Math.max(0, 100 - score),
+    weeklyActivity,
+    insights: [
+      evaluation.feedback,
+      progress.weakTopics.length
+        ? `Focus next on: ${progress.weakTopics.join(", ")}`
+        : "No weak topics reported right now.",
+    ],
+  };
 }
 
 export function getUserName(): string {

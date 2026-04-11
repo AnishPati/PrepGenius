@@ -6,12 +6,22 @@ import ChartCard from "@/components/ChartCard";
 import TopicTag from "@/components/TopicTag";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchAnalytics } from "@/lib/api";
+import { fetchAnalytics, getUserId } from "@/lib/api";
 import type { AnalyticsData } from "@/types";
 import { TrendingUp, Target, Lightbulb, BarChart3 } from "lucide-react";
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip,
+  CartesianGrid,
 } from "recharts";
 
 const Analytics = () => {
@@ -19,7 +29,14 @@ const Analytics = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAnalytics()
+    const userId = getUserId();
+    if (!userId) {
+      toast.error("Please complete onboarding first");
+      setLoading(false);
+      return;
+    }
+
+    fetchAnalytics(userId)
       .then(setData)
       .catch(() => toast.error("Failed to load analytics"))
       .finally(() => setLoading(false));
@@ -30,7 +47,9 @@ const Analytics = () => {
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-48 w-full rounded-2xl" />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-48 w-full rounded-2xl" />
+          ))}
         </main>
       </div>
     );
@@ -52,15 +71,32 @@ const Analytics = () => {
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-primary" /> Analytics
           </h1>
-          <p className="text-sm text-muted-foreground">Deep dive into your performance</p>
+          <p className="text-sm text-muted-foreground">
+            Deep dive into your performance
+          </p>
         </motion.div>
 
         {/* Overview cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: "Average Score", value: `${data.averageScore}%`, icon: Target, color: "text-primary" },
-            { label: "Improvement", value: `+${data.improvementRate}%`, icon: TrendingUp, color: "text-success" },
-            { label: "Topics Covered", value: `${data.topicMastery.length}`, icon: Lightbulb, color: "text-warning" },
+            {
+              label: "Average Score",
+              value: `${data.averageScore}%`,
+              icon: Target,
+              color: "text-primary",
+            },
+            {
+              label: "Improvement",
+              value: `+${data.improvementRate}%`,
+              icon: TrendingUp,
+              color: "text-success",
+            },
+            {
+              label: "Topics Covered",
+              value: `${data.topicMastery.length}`,
+              icon: Lightbulb,
+              color: "text-warning",
+            },
           ].map((item, i) => (
             <motion.div
               key={item.label}
@@ -70,12 +106,18 @@ const Analytics = () => {
             >
               <Card>
                 <CardContent className="pt-6 flex items-center gap-4">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-muted ${item.color}`}>
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl bg-muted ${item.color}`}
+                  >
                     <item.icon className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">{item.value}</p>
-                    <p className="text-xs text-muted-foreground">{item.label}</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {item.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.label}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -89,11 +131,28 @@ const Analytics = () => {
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.scoreTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} />
-                  <YAxis domain={[50, 100]} tick={{ fontSize: 11 }} tickLine={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
+                  />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={[50, 100]}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                  />
                   <Tooltip />
-                  <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 3 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2.5}
+                    dot={{ r: 3 }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -103,10 +162,23 @@ const Analytics = () => {
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.topicMastery} layout="vertical">
-                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <YAxis dataKey="topic" type="category" tick={{ fontSize: 10 }} width={90} />
+                  <XAxis
+                    type="number"
+                    domain={[0, 100]}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis
+                    dataKey="topic"
+                    type="category"
+                    tick={{ fontSize: 10 }}
+                    width={90}
+                  />
                   <Tooltip />
-                  <Bar dataKey="mastery" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                  <Bar
+                    dataKey="mastery"
+                    fill="hsl(var(--primary))"
+                    radius={[0, 4, 4, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -116,7 +188,15 @@ const Analytics = () => {
             <div className="h-48 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" label={({ name, value }) => `${name}: ${value}%`}>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={70}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}%`}
+                  >
                     {pieData.map((_, i) => (
                       <Cell key={i} fill={pieColors[i]} />
                     ))}
@@ -132,9 +212,14 @@ const Analytics = () => {
               {data.topicMastery
                 .filter((t) => t.status === "weak" || t.status === "moderate")
                 .map((t) => (
-                  <div key={t.topic} className="flex items-center justify-between">
+                  <div
+                    key={t.topic}
+                    className="flex items-center justify-between"
+                  >
                     <TopicTag topic={t.topic} status={t.status} />
-                    <span className="text-xs font-medium text-muted-foreground">{t.mastery}% mastery</span>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t.mastery}% mastery
+                    </span>
                   </div>
                 ))}
             </div>
@@ -142,7 +227,11 @@ const Analytics = () => {
         </div>
 
         {/* Insights */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
           <Card>
             <CardContent className="pt-6 space-y-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -150,7 +239,10 @@ const Analytics = () => {
               </h3>
               <ul className="space-y-2">
                 {data.insights.map((insight, i) => (
-                  <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                  <li
+                    key={i}
+                    className="text-sm text-muted-foreground flex items-start gap-2"
+                  >
                     <span className="text-primary mt-0.5">•</span>
                     {insight}
                   </li>
