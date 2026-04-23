@@ -12,7 +12,7 @@ import type { OnboardRequest } from "../../../types/user";
 
 export async function POST(req: NextRequest) {
   const payloadCheck = validateContentLength(req);
-  if (!payloadCheck.ok) {
+  if ("error" in payloadCheck) {
     return badRequest(payloadCheck.error);
   }
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     for (const field of requiredFields) {
       const parsed = getRequiredString(raw, field);
-      if (!parsed.ok) {
+      if ("error" in parsed) {
         return badRequest(parsed.error);
       }
       collected[field] = parsed.value;
