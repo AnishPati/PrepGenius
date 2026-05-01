@@ -1,3 +1,5 @@
+"use client";
+
 import { Link, useLocation } from "react-router-dom";
 import { BookOpen, BarChart3, Home, Zap } from "lucide-react";
 
