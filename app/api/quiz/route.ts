@@ -20,13 +20,24 @@ export async function GET(req: NextRequest) {
       "GET",
     )) as Partial<QuizResponse>;
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         quiz_id: data.quiz_id ?? "",
         questions: Array.isArray(data.questions) ? data.questions : [],
       },
       { status: 200 },
     );
+
+    if (data.quiz_id) {
+      response.cookies.set("current_quiz_id", data.quiz_id, {
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
+
+    return response;
   } catch (error) {
     console.error("GET /api/quiz failed:", error);
     return serverError();

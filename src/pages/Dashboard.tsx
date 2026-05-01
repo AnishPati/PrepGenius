@@ -27,6 +27,7 @@ import {
   getGreeting,
   getUserId,
   getCurrentQuizId,
+  getStoredProfileMeta,
 } from "@/lib/api";
 import type {
   QuizQuestion,
@@ -44,6 +45,7 @@ import {
   Code,
   BookOpen,
   MessageSquare,
+  RefreshCcw,
 } from "lucide-react";
 import {
   LineChart,
@@ -68,15 +70,14 @@ const SECTION_ORDER = [
   "Behavioral",
 ];
 
-function getCompanyRole(): { company: string; role: string } {
-  try {
-    const p = localStorage.getItem("user_profile");
-    if (p) {
-      const parsed = JSON.parse(p);
-      return { company: parsed.company || "", role: parsed.role || "" };
-    }
-  } catch {}
-  return { company: "", role: "" };
+function normalizeTopic(topic: string): string {
+  const value = topic.toLowerCase();
+  if (value.includes("aptitude")) return "Aptitude";
+  if (value.includes("technical") || value.includes("dsa"))
+    return "Technical / DSA";
+  if (value.includes("core")) return "Core Subject";
+  if (value.includes("behavior")) return "Behavioral";
+  return topic.trim() || "General";
 }
 
 const Dashboard = () => {
@@ -90,6 +91,7 @@ const Dashboard = () => {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [quizId, setQuizId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [fetchingQuiz, setFetchingQuiz] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [scoreTrend, setScoreTrend] = useState<Array<{ d: string; s: number }>>(
     [],
@@ -98,7 +100,7 @@ const Dashboard = () => {
 
   const userName = getUserName();
   const greeting = getGreeting();
-  const { company, role } = getCompanyRole();
+  const { company, role } = getStoredProfileMeta();
 
   useEffect(() => {
     const load = async () => {
@@ -146,12 +148,21 @@ const Dashboard = () => {
   const groupedQuestions = useMemo(() => {
     const groups: Record<string, QuizQuestion[]> = {};
     for (const q of quiz) {
-      (groups[q.topic] ??= []).push(q);
+      const key = normalizeTopic(q.topic);
+      (groups[key] ??= []).push({ ...q, topic: key });
     }
-    return SECTION_ORDER.filter((s) => groups[s]).map((s) => ({
-      section: s,
-      questions: groups[s],
-    }));
+    const orderedKnownSections = SECTION_ORDER.filter((s) => groups[s]).map(
+      (s) => ({
+        section: s,
+        questions: groups[s],
+      }),
+    );
+
+    const otherSections = Object.keys(groups)
+      .filter((s) => !SECTION_ORDER.includes(s))
+      .map((s) => ({ section: s, questions: groups[s] }));
+
+    return [...orderedKnownSections, ...otherSections];
   }, [quiz]);
 
   // Running index for question numbering
@@ -184,6 +195,27 @@ const Dashboard = () => {
       toast.error("Failed to submit answers");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGetQuiz = async () => {
+    if (!userId) {
+      toast.error("Missing user session. Please onboard again.");
+      navigate("/onboarding");
+      return;
+    }
+
+    setFetchingQuiz(true);
+    try {
+      const nextQuiz = await fetchQuiz(userId);
+      setQuiz(nextQuiz);
+      setAnswers({});
+      setQuizId(getCurrentQuizId());
+      toast.success("Quiz loaded from N8N");
+    } catch {
+      toast.error("Failed to load quiz from N8N");
+    } finally {
+      setFetchingQuiz(false);
     }
   };
 
@@ -284,10 +316,25 @@ const Dashboard = () => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-foreground">
-                {completedCount} / {quiz.length}
-              </span>
+            <div className="flex flex-col items-start gap-3 sm:items-end">
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={handleGetQuiz}
+                  disabled={fetchingQuiz}
+                  variant="outline"
+                  className="rounded-full px-4 gap-2"
+                >
+                  {fetchingQuiz ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="h-4 w-4" />
+                  )}
+                  {fetchingQuiz ? "Loading Quiz..." : "Get Quiz"}
+                </Button>
+                <span className="text-sm font-medium text-foreground">
+                  {completedCount} / {quiz.length}
+                </span>
+              </div>
               <Progress
                 value={(completedCount / Math.max(quiz.length, 1)) * 100}
                 className="h-2 w-32"
@@ -295,45 +342,55 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {groupedQuestions.map(({ section, questions }) => {
-            const meta = SECTION_META[section];
-            const Icon = meta?.icon ?? Brain;
-            return (
-              <Card key={section}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-primary" />
-                    {meta?.label ?? section}
-                    <Badge
-                      variant="outline"
-                      className="text-xs font-normal ml-auto"
-                    >
-                      {questions.length}{" "}
-                      {questions.length === 1 ? "question" : "questions"}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {questions.map((q) => {
-                    questionIndex++;
-                    return (
-                      <QuizCard
-                        key={q.id}
-                        index={questionIndex}
-                        question={q.text}
-                        topic={q.topic}
-                        difficulty={q.difficulty}
-                        value={answers[q.id] || ""}
-                        onChange={(v) =>
-                          setAnswers((prev) => ({ ...prev, [q.id]: v }))
-                        }
-                      />
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            );
-          })}
+          {groupedQuestions.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                No quiz questions loaded yet. Click{" "}
+                <span className="font-medium text-foreground">Get Quiz</span> to
+                fetch questions from N8N.
+              </CardContent>
+            </Card>
+          ) : (
+            groupedQuestions.map(({ section, questions }) => {
+              const meta = SECTION_META[section];
+              const Icon = meta?.icon ?? Brain;
+              return (
+                <Card key={section}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-primary" />
+                      {meta?.label ?? section}
+                      <Badge
+                        variant="outline"
+                        className="text-xs font-normal ml-auto"
+                      >
+                        {questions.length}{" "}
+                        {questions.length === 1 ? "question" : "questions"}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {questions.map((q) => {
+                      questionIndex++;
+                      return (
+                        <QuizCard
+                          key={q.id}
+                          index={questionIndex}
+                          question={q.text}
+                          topic={q.topic}
+                          difficulty={q.difficulty}
+                          value={answers[q.id] || ""}
+                          onChange={(v) =>
+                            setAnswers((prev) => ({ ...prev, [q.id]: v }))
+                          }
+                        />
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
 
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground">

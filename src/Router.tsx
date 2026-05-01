@@ -5,6 +5,7 @@ import Index from "./pages/Index";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
+import Profile from "./pages/Profile";
 import Success from "./pages/Success";
 import NotFound from "./pages/NotFound";
 
@@ -16,6 +17,7 @@ export default function Router() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/success" element={<Success />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

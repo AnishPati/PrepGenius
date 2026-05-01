@@ -1,11 +1,12 @@
 "use client";
 
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, BarChart3, Home, Zap } from "lucide-react";
+import { BookOpen, BarChart3, Home, Zap, User } from "lucide-react";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: Home },
   { path: "/analytics", label: "Analytics", icon: BarChart3 },
+  { path: "/profile", label: "Profile", icon: User },
 ];
 
 const Navbar = () => {
@@ -14,7 +15,10 @@ const Navbar = () => {
   return (
     <nav className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
       <div className="mx-auto max-w-5xl flex items-center justify-between px-4 h-14">
-        <Link to="/" className="flex items-center gap-2 font-bold text-foreground">
+        <Link
+          to="/"
+          className="flex items-center gap-2 font-bold text-foreground"
+        >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Zap className="h-4 w-4 text-primary-foreground" />
           </div>

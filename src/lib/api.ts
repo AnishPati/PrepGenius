@@ -64,6 +64,12 @@ type BackendProfileResponse = {
   progress_score?: number;
 };
 
+type StoredProfile = {
+  name: string;
+  company: string;
+  role: string;
+};
+
 function normalizeDifficulty(
   value: string | undefined,
 ): "easy" | "medium" | "hard" {
@@ -71,13 +77,51 @@ function normalizeDifficulty(
   return "medium";
 }
 
-function profileFromStorage(): Partial<UserProfile> & { user_id?: string } {
+function readCookie(name: string): string {
+  if (typeof document === "undefined") return "";
+
+  const escapedName = `${name}=`;
+  const parts = document.cookie.split(";");
+
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(escapedName)) {
+      return decodeURIComponent(trimmed.slice(escapedName.length));
+    }
+  }
+
+  return "";
+}
+
+function writeCookie(
+  name: string,
+  value: string,
+  maxAgeSeconds = 60 * 60 * 24 * 30,
+): void {
+  if (typeof document === "undefined") return;
+
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; samesite=lax`;
+}
+
+function readStoredProfile(): StoredProfile {
   try {
-    const raw = localStorage.getItem("user_profile");
-    if (!raw) return {};
-    return JSON.parse(raw) as Partial<UserProfile> & { user_id?: string };
+    const raw = readCookie("user_profile");
+    if (!raw) {
+      return {
+        name: readCookie("user_name"),
+        company: "",
+        role: "",
+      };
+    }
+
+    const parsed = JSON.parse(raw) as Partial<StoredProfile>;
+    return {
+      name: String(parsed.name || ""),
+      company: String(parsed.company || ""),
+      role: String(parsed.role || ""),
+    };
   } catch {
-    return {};
+    return { name: "", company: "", role: "" };
   }
 }
 
@@ -148,11 +192,15 @@ export async function onboardUser(
     },
   );
 
-  localStorage.setItem(
+  const userId = result.user_id || profile.email;
+  writeCookie("user_id", userId);
+  writeCookie("user_name", profile.name);
+  writeCookie(
     "user_profile",
     JSON.stringify({
-      ...profile,
-      user_id: result.user_id || profile.email,
+      name: profile.name,
+      company: profile.company,
+      role: profile.role,
     }),
   );
 
@@ -160,20 +208,20 @@ export async function onboardUser(
 }
 
 export function getUserId(): string {
-  const profile = profileFromStorage();
-  return String(profile.user_id || profile.email || "").trim();
+  return readCookie("user_id");
 }
 
 export function getCurrentQuizId(): string {
-  return (localStorage.getItem("current_quiz_id") || "").trim();
+  return readCookie("current_quiz_id");
 }
 
 export async function fetchQuiz(userId: string): Promise<QuizQuestion[]> {
   const data = await apiFetch<BackendQuizResponse>(
     `/api/quiz?user_id=${encodeURIComponent(userId)}`,
   );
+
   if (data.quiz_id) {
-    localStorage.setItem("current_quiz_id", data.quiz_id);
+    writeCookie("current_quiz_id", data.quiz_id);
   }
 
   return (data.questions || [])
@@ -302,11 +350,17 @@ export async function fetchAnalytics(userId: string): Promise<AnalyticsData> {
 }
 
 export function getUserName(): string {
-  try {
-    const profile = localStorage.getItem("user_profile");
-    if (profile) return JSON.parse(profile).name;
-  } catch {}
-  return "User";
+  const profile = readStoredProfile();
+  return profile.name || readCookie("user_name") || "User";
+}
+
+export function getStoredProfileMeta(): StoredProfile {
+  const profile = readStoredProfile();
+  return {
+    name: profile.name || readCookie("user_name"),
+    company: profile.company,
+    role: profile.role,
+  };
 }
 
 export function getGreeting(): string {

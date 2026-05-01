@@ -62,8 +62,52 @@ export async function POST(req: NextRequest) {
       question_count: questionCount,
     };
 
-    await callN8n("onboard", "POST", body);
-    return NextResponse.json({ success: true }, { status: 200 });
+    const data = (await callN8n("onboard", "POST", body)) as Partial<{
+      success: boolean;
+      user_id: string;
+      userId: string;
+      id: string;
+    }>;
+
+    const userId = data.user_id ?? data.userId ?? data.id;
+    if (!userId) {
+      return serverError("Missing user_id from onboard response");
+    }
+
+    const response = NextResponse.json(
+      { success: data.success !== false, user_id: userId },
+      { status: 200 },
+    );
+
+    response.cookies.set("user_id", userId, {
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+    response.cookies.set("user_name", collected.name, {
+      httpOnly: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+    response.cookies.set(
+      "user_profile",
+      encodeURIComponent(
+        JSON.stringify({
+          company: collected.company,
+          role: collected.role,
+        }),
+      ),
+      {
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+      },
+    );
+
+    return response;
   } catch (error) {
     console.error("POST /api/onboard failed:", error);
     return serverError();

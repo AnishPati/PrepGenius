@@ -64,11 +64,12 @@ export function serverError(message = "Internal server error") {
 export function getValidatedUserId(
   req: NextRequest,
 ): { ok: true; userId: string } | { ok: false; error: string } {
-  const raw = req.nextUrl.searchParams.get("user_id");
+  const cookieUserId = req.cookies.get("user_id")?.value;
+  const raw = cookieUserId || req.nextUrl.searchParams.get("user_id");
   const userId = sanitizeString(raw);
 
   if (!userId) {
-    return { ok: false, error: "Missing query param: user_id" };
+    return { ok: false, error: "Missing user_id" };
   }
 
   if (userId.length > 128) {

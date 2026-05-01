@@ -19,7 +19,10 @@ export async function POST(req: NextRequest) {
   try {
     const raw = (await req.json()) as Record<string, unknown>;
 
-    const userId = getRequiredString(raw, "user_id");
+    const cookieUserId = req.cookies.get("user_id")?.value;
+    const userId = cookieUserId
+      ? { ok: true as const, value: cookieUserId }
+      : getRequiredString(raw, "user_id");
     if (!userId.ok) {
       return badRequest(userId.error);
     }
