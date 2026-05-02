@@ -20,21 +20,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchQuiz,
   fetchEvaluation,
-  fetchProgress,
-  fetchGamification,
+  fetchUserProfile,
   submitAnswers,
   getUserName,
   getGreeting,
   getUserId,
   getCurrentQuizId,
-  getStoredProfileMeta,
 } from "@/lib/api";
-import type {
-  QuizQuestion,
-  Evaluation,
-  ProgressData,
-  GamificationData,
-} from "@/types";
+import type { QuizQuestion, Evaluation } from "@/types";
 import {
   Loader2,
   Flame,
@@ -70,6 +63,24 @@ const SECTION_ORDER = [
   "Behavioral",
 ];
 
+interface LiveProfileData {
+  name?: string;
+  email?: string;
+  branch?: string;
+  company?: string;
+  role?: string;
+  difficulty?: string;
+  weak_topics: string[];
+  strong_topics: string[];
+  progress_score: number;
+  overall_score?: number;
+  feedback?: string;
+  skill_gaps?: string[];
+  insights?: string[];
+  score_trend?: Array<{ date: string; score: number }>;
+  weekly_activity?: Array<{ day: string; intensity: number }>;
+}
+
 function normalizeTopic(topic: string): string {
   const value = topic.toLowerCase();
   if (value.includes("aptitude")) return "Aptitude";
@@ -84,23 +95,21 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
-  const [progress, setProgress] = useState<ProgressData | null>(null);
-  const [gamification, setGamification] = useState<GamificationData | null>(
-    null,
-  );
+  const [profile, setProfile] = useState<LiveProfileData | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [quizId, setQuizId] = useState("");
   const [loading, setLoading] = useState(true);
   const [fetchingQuiz, setFetchingQuiz] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [scoreTrend, setScoreTrend] = useState<Array<{ d: string; s: number }>>(
-    [],
-  );
   const userId = getUserId();
 
   const userName = getUserName();
   const greeting = getGreeting();
-  const { company, role } = getStoredProfileMeta();
+  const liveName = profile?.name || userName;
+  const liveCompany = profile?.company || "";
+  const liveRole = profile?.role || "";
+  const liveScoreTrend = profile?.score_trend || [];
+  const liveWeeklyActivity = profile?.weekly_activity || [];
 
   useEffect(() => {
     const load = async () => {
@@ -111,26 +120,27 @@ const Dashboard = () => {
       }
 
       try {
-        const [q, e, p, g] = await Promise.all([
+        const [q, e, liveProfile] = await Promise.all([
           fetchQuiz(userId),
           fetchEvaluation(userId),
-          fetchProgress(userId),
-          fetchGamification(userId),
+          fetchUserProfile(userId),
         ]);
         setQuiz(q);
         setEvaluation(e);
-        setProgress(p);
-        setGamification(g);
+        setProfile({
+          ...liveProfile,
+          weak_topics: Array.isArray(liveProfile.weak_topics)
+            ? liveProfile.weak_topics
+            : [],
+          strong_topics: Array.isArray(liveProfile.strong_topics)
+            ? liveProfile.strong_topics
+            : [],
+          progress_score:
+            typeof liveProfile.progress_score === "number"
+              ? liveProfile.progress_score
+              : 0,
+        });
         setQuizId(getCurrentQuizId());
-        const base = Math.max(0, Math.min(100, e.score));
-        setScoreTrend([
-          { d: "M", s: Math.max(0, base - 10) },
-          { d: "T", s: Math.max(0, base - 8) },
-          { d: "W", s: Math.max(0, base - 6) },
-          { d: "T", s: Math.max(0, base - 4) },
-          { d: "F", s: Math.max(0, base - 2) },
-          { d: "S", s: base },
-        ]);
       } catch {
         toast.error("Failed to load dashboard data");
       } finally {
@@ -244,15 +254,15 @@ const Dashboard = () => {
         >
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              {greeting}, {userName} 👋
+              {greeting}, {liveName} 👋
             </h1>
-            {company && role ? (
+            {liveCompany && liveRole ? (
               <div className="flex items-center gap-1.5 mt-1">
                 <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
                   Preparing for{" "}
                   <span className="font-medium text-foreground">
-                    {company} — {role}
+                    {liveCompany} — {liveRole}
                   </span>
                 </span>
               </div>
@@ -262,40 +272,34 @@ const Dashboard = () => {
               </p>
             )}
           </div>
-          <div className="flex items-center gap-4">
-            {gamification && (
-              <StreakBadge
-                streak={gamification.streak}
-                calendar={gamification.streakCalendar}
-              />
-            )}
-          </div>
         </motion.div>
 
-        {/* XP + Gamification */}
-        {gamification && (
+        {/* Live profile summary */}
+        {profile && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
             <Card>
-              <CardContent className="pt-6">
-                <XPProgressBar
-                  xp={gamification.xp}
-                  level={gamification.level}
-                  xpForNextLevel={gamification.xpForNextLevel}
-                  xpAtCurrentLevel={gamification.xpAtCurrentLevel}
-                  xpEarnedToday={gamification.xpEarnedToday}
-                />
-                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Flame className="h-3.5 w-3.5 text-destructive" />
-                    Keep your streak alive — complete today's challenge!
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    +10 XP per challenge
-                  </Badge>
+              <CardContent className="pt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Profile score</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {profile.progress_score}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {profile.strong_topics.length} strong topics •{" "}
+                    {profile.weak_topics.length} weak topics
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {profile.strong_topics.slice(0, 3).map((topic) => (
+                    <TopicTag key={topic} topic={topic} status="strong" />
+                  ))}
+                  {profile.weak_topics.slice(0, 3).map((topic) => (
+                    <TopicTag key={topic} topic={topic} status="weak" />
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -419,25 +423,31 @@ const Dashboard = () => {
           )}
           <ChartCard title="Score Trend">
             <div className="h-32">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={scoreTrend}>
-                  <XAxis
-                    dataKey="d"
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis hide domain={[50, 100]} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="s"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {liveScoreTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={liveScoreTrend}>
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis hide domain={[0, 100]} />
+                    <Tooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="score"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  No live score trend returned by the profile API.
+                </div>
+              )}
             </div>
           </ChartCard>
         </div>
@@ -467,53 +477,63 @@ const Dashboard = () => {
           </motion.div>
         )}
 
-        {/* Weekly Activity + Progress */}
+        {/* Weekly Activity + Live Topics */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ChartCard title="Weekly Activity">
-            <HeatmapGrid
-              data={(
-                gamification?.streakCalendar || [
-                  false,
-                  false,
-                  false,
-                  false,
-                  false,
-                  false,
-                  false,
-                ]
-              ).map((active, idx) => ({
-                day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][idx],
-                intensity: active ? 4 : 0,
-              }))}
-            />
+            {liveWeeklyActivity.length > 0 ? (
+              <HeatmapGrid data={liveWeeklyActivity} />
+            ) : (
+              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                No weekly activity returned by the profile API.
+              </div>
+            )}
           </ChartCard>
 
-          {progress && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold">
-                  Topic Mastery
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {progress.topicMastery.map((tm) => (
-                  <div key={tm.topic} className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-foreground font-medium">
-                        {tm.topic}
-                      </span>
-                      <TopicTag topic={`${tm.mastery}%`} status={tm.status} />
-                    </div>
-                    <Progress value={tm.mastery} className="h-1.5" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">
+                Live Topics
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">
+                  Strong topics
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {profile?.strong_topics.length ? (
+                    profile.strong_topics.map((topic) => (
+                      <TopicTag key={topic} topic={topic} status="strong" />
+                    ))
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      None returned
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">
+                  Weak topics
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {profile?.weak_topics.length ? (
+                    profile.weak_topics.map((topic) => (
+                      <TopicTag key={topic} topic={topic} status="weak" />
+                    ))
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      None returned
+                    </span>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Overall Readiness */}
-        {progress && (
+        {profile && (
           <Card>
             <CardContent className="pt-6 space-y-3">
               <div className="flex items-center justify-between">
@@ -521,10 +541,10 @@ const Dashboard = () => {
                   Overall Readiness
                 </p>
                 <span className="text-2xl font-bold text-primary">
-                  {progress.overallScore}%
+                  {profile.progress_score}%
                 </span>
               </div>
-              <Progress value={progress.overallScore} className="h-3" />
+              <Progress value={profile.progress_score} className="h-3" />
             </CardContent>
           </Card>
         )}

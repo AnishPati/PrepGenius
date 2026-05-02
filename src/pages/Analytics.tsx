@@ -2,30 +2,33 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
-import ChartCard from "@/components/ChartCard";
 import TopicTag from "@/components/TopicTag";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchAnalytics, getUserId } from "@/lib/api";
-import type { AnalyticsData } from "@/types";
-import { TrendingUp, Target, Lightbulb, BarChart3 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
+import { fetchUserProfile, getUserId } from "@/lib/api";
+import { TrendingUp, Target, Lightbulb, UserRound } from "lucide-react";
+
+interface ProfileData {
+  user_id?: string;
+  name?: string;
+  email?: string;
+  branch?: string;
+  company?: string;
+  role?: string;
+  difficulty?: string;
+  weak_topics: string[];
+  strong_topics: string[];
+  progress_score: number;
+  overall_score?: number;
+  feedback?: string;
+  skill_gaps?: string[];
+  insights?: string[];
+  score_trend?: Array<{ date: string; score: number }>;
+  weekly_activity?: Array<{ day: string; intensity: number }>;
+}
 
 const Analytics = () => {
-  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,7 +39,7 @@ const Analytics = () => {
       return;
     }
 
-    fetchAnalytics(userId)
+    fetchUserProfile(userId)
       .then(setData)
       .catch(() => toast.error("Failed to load analytics"))
       .finally(() => setLoading(false));
@@ -57,11 +60,13 @@ const Analytics = () => {
 
   if (!data) return null;
 
-  const pieData = [
-    { name: "Correct", value: data.accuracyCorrect },
-    { name: "Incorrect", value: data.accuracyIncorrect },
-  ];
-  const pieColors = ["hsl(var(--success))", "hsl(var(--destructive))"];
+  const liveInsights = [
+    data.feedback,
+    ...(Array.isArray(data.insights) ? data.insights : []),
+    ...(Array.isArray(data.skill_gaps) && data.skill_gaps.length > 0
+      ? [`Skill gaps: ${data.skill_gaps.join(", ")}`]
+      : []),
+  ].filter((item): item is string => Boolean(item && item.trim()));
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,10 +74,10 @@ const Analytics = () => {
       <main className="mx-auto max-w-5xl px-4 py-8 space-y-8">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-primary" /> Analytics
+            <UserRound className="h-6 w-6 text-primary" /> Live Profile Analytics
           </h1>
           <p className="text-sm text-muted-foreground">
-            Deep dive into your performance
+            Live data from your profile webhook. No generated metrics.
           </p>
         </motion.div>
 
@@ -80,20 +85,20 @@ const Analytics = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             {
-              label: "Average Score",
-              value: `${data.averageScore}%`,
+              label: "Progress Score",
+              value: `${data.progress_score}%`,
               icon: Target,
               color: "text-primary",
             },
             {
-              label: "Improvement",
-              value: `+${data.improvementRate}%`,
+              label: "Strong Topics",
+              value: `${data.strong_topics.length}`,
               icon: TrendingUp,
               color: "text-success",
             },
             {
-              label: "Topics Covered",
-              value: `${data.topicMastery.length}`,
+              label: "Weak Topics",
+              value: `${data.weak_topics.length}`,
               icon: Lightbulb,
               color: "text-warning",
             },
@@ -125,132 +130,120 @@ const Analytics = () => {
           ))}
         </div>
 
-        {/* Charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ChartCard title="📈 Score Trend">
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.scoreTrend}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    domain={[50, 100]}
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                  />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="score"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2.5}
-                    dot={{ r: 3 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-
-          <ChartCard title="📊 Topic Mastery">
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.topicMastery} layout="vertical">
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis
-                    dataKey="topic"
-                    type="category"
-                    tick={{ fontSize: 10 }}
-                    width={90}
-                  />
-                  <Tooltip />
-                  <Bar
-                    dataKey="mastery"
-                    fill="hsl(var(--primary))"
-                    radius={[0, 4, 4, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-
-          <ChartCard title="🎯 Accuracy">
-            <div className="h-48 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}%`}
-                  >
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={pieColors[i]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-
-          <ChartCard title="🔥 Weak Topic Frequency">
-            <div className="space-y-2">
-              {data.topicMastery
-                .filter((t) => t.status === "weak" || t.status === "moderate")
-                .map((t) => (
-                  <div
-                    key={t.topic}
-                    className="flex items-center justify-between"
-                  >
-                    <TopicTag topic={t.topic} status={t.status} />
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {t.mastery}% mastery
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </ChartCard>
-        </div>
-
-        {/* Insights */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
           <Card>
             <CardContent className="pt-6 space-y-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-warning" /> AI Insights
+                <Target className="h-4 w-4 text-primary" /> Profile Summary
               </h3>
-              <ul className="space-y-2">
-                {data.insights.map((insight, i) => (
-                  <li
-                    key={i}
-                    className="text-sm text-muted-foreground flex items-start gap-2"
-                  >
-                    <span className="text-primary mt-0.5">•</span>
-                    {insight}
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                {data.name && <p>Name: {data.name}</p>}
+                {data.company && <p>Company: {data.company}</p>}
+                {data.role && <p>Role: {data.role}</p>}
+                {data.branch && <p>Branch: {data.branch}</p>}
+                {data.difficulty && <p>Difficulty: {data.difficulty}</p>}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-warning" /> Live Notes
+              </h3>
+              {liveInsights.length > 0 ? (
+                <ul className="space-y-2">
+                  {liveInsights.map((insight, i) => (
+                    <li
+                      key={i}
+                      className="text-sm text-muted-foreground flex items-start gap-2"
+                    >
+                      <span className="text-primary mt-0.5">•</span>
+                      {insight}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  The profile webhook did not return feedback yet.
+                </p>
+              )}
             </CardContent>
           </Card>
         </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">
+                Strong Topics
+              </h3>
+              {data.strong_topics.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {data.strong_topics.map((topic) => (
+                    <TopicTag key={topic} topic={topic} status="strong" />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No strong topics returned by the live profile API.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">
+                Weak Topics
+              </h3>
+              {data.weak_topics.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {data.weak_topics.map((topic) => (
+                    <TopicTag key={topic} topic={topic} status="weak" />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No weak topics returned by the live profile API.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">
+              Raw profile payload
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              progress_score: {data.progress_score}
+              {typeof data.overall_score === "number"
+                ? `, overall_score: ${data.overall_score}`
+                : ""}
+            </p>
+            {Array.isArray(data.score_trend) && data.score_trend.length > 0 && (
+              <div className="space-y-1 text-sm text-muted-foreground">
+                {data.score_trend.map((point) => (
+                  <p key={point.date}>
+                    {point.date}: {point.score}
+                  </p>
+                ))}
+              </div>
+            )}
+            {Array.isArray(data.weekly_activity) &&
+              data.weekly_activity.length > 0 && (
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  {data.weekly_activity.map((day) => (
+                    <p key={day.day}>
+                      {day.day}: {day.intensity}
+                    </p>
+                  ))}
+                </div>
+              )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

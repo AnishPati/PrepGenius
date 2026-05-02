@@ -11,7 +11,7 @@ import type { UserProfileResponse } from "../../../types/user";
 export async function GET(req: NextRequest) {
   const userValidation = getValidatedUserId(req);
   if (!userValidation.ok) {
-    return badRequest(userValidation.error);
+    return badRequest((userValidation as { ok: false; error: string }).error);
   }
 
   try {
@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       {
+        ...data,
         weak_topics: Array.isArray(data.weak_topics) ? data.weak_topics : [],
         strong_topics: Array.isArray(data.strong_topics)
           ? data.strong_topics

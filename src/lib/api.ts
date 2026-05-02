@@ -59,9 +59,22 @@ type BackendEvaluationResponse = {
 };
 
 type BackendProfileResponse = {
+  user_id?: string;
+  name?: string;
+  email?: string;
+  branch?: string;
+  company?: string;
+  role?: string;
+  difficulty?: string;
   weak_topics?: string[];
   strong_topics?: string[];
   progress_score?: number;
+  overall_score?: number;
+  feedback?: string;
+  skill_gaps?: string[];
+  insights?: string[];
+  score_trend?: Array<{ date: string; score: number }>;
+  weekly_activity?: Array<{ day: string; intensity: number }>;
 };
 
 type StoredProfile = {
@@ -289,6 +302,14 @@ export async function fetchProgress(userId: string): Promise<ProgressData> {
     overallScore,
     topicMastery: mergeWeakStrongTopics(weakTopics, strongTopics),
   };
+}
+
+export async function fetchUserProfile(
+  userId: string,
+): Promise<BackendProfileResponse> {
+  return apiFetch<BackendProfileResponse>(
+    `/api/profile?user_id=${encodeURIComponent(userId)}`,
+  );
 }
 
 export async function fetchGamification(
