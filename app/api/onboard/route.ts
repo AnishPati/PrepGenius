@@ -5,6 +5,7 @@ import {
   badRequest,
   getRequiredString,
   isValidEmail,
+  normalizeSpreadsheetId,
   serverError,
   validateContentLength,
 } from "../../../lib/validators";
@@ -13,7 +14,7 @@ import type { OnboardRequest } from "../../../types/user";
 export async function POST(req: NextRequest) {
   const payloadCheck = validateContentLength(req);
   if ("error" in payloadCheck) {
-    return badRequest(payloadCheck.error);
+    return badRequest((payloadCheck as { ok: false; error: string }).error);
   }
 
   try {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     for (const field of requiredFields) {
       const parsed = getRequiredString(raw, field);
       if ("error" in parsed) {
-        return badRequest(parsed.error);
+        return badRequest((parsed as { ok: false; error: string }).error);
       }
       collected[field] = parsed.value;
     }
@@ -69,7 +70,9 @@ export async function POST(req: NextRequest) {
       id: string;
     }>;
 
-    const userId = data.user_id ?? data.userId ?? data.id;
+    const userId = normalizeSpreadsheetId(
+      data.user_id ?? data.userId ?? data.id,
+    );
     if (!userId) {
       return serverError("Missing user_id from onboard response");
     }

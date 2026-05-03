@@ -12,6 +12,11 @@ export function sanitizeString(input: unknown): string {
   return input.trim();
 }
 
+export function normalizeSpreadsheetId(input: unknown): string {
+  const value = sanitizeString(input);
+  return value.startsWith("=") ? value.slice(1).trim() : value;
+}
+
 export function isValidEmail(email: string): boolean {
   return EMAIL_REGEX.test(email);
 }
@@ -66,7 +71,7 @@ export function getValidatedUserId(
 ): { ok: true; userId: string } | { ok: false; error: string } {
   const cookieUserId = req.cookies.get("user_id")?.value;
   const raw = cookieUserId || req.nextUrl.searchParams.get("user_id");
-  const userId = sanitizeString(raw);
+  const userId = normalizeSpreadsheetId(raw);
 
   if (!userId) {
     return { ok: false, error: "Missing user_id" };

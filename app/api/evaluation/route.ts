@@ -11,7 +11,7 @@ import type { EvaluationResponse } from "../../../types/evaluation";
 export async function GET(req: NextRequest) {
   const userValidation = getValidatedUserId(req);
   if (!userValidation.ok) {
-    return badRequest(userValidation.error);
+    return badRequest((userValidation as { ok: false; error: string }).error);
   }
 
   try {

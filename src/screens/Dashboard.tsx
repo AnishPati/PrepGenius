@@ -127,14 +127,19 @@ const Dashboard = () => {
         ]);
         setQuiz(q);
         setEvaluation(e);
+
+        // Extract topic names from objects if they have a 'topic' property
+        const extractTopics = (topics: any[]): string[] => {
+          if (!Array.isArray(topics)) return [];
+          return topics
+            .map((t) => (typeof t === "string" ? t : t?.topic))
+            .filter((t) => t && typeof t === "string");
+        };
+
         setProfile({
           ...liveProfile,
-          weak_topics: Array.isArray(liveProfile.weak_topics)
-            ? liveProfile.weak_topics
-            : [],
-          strong_topics: Array.isArray(liveProfile.strong_topics)
-            ? liveProfile.strong_topics
-            : [],
+          weak_topics: extractTopics(liveProfile.weak_topics),
+          strong_topics: extractTopics(liveProfile.strong_topics),
           progress_score:
             typeof liveProfile.progress_score === "number"
               ? liveProfile.progress_score

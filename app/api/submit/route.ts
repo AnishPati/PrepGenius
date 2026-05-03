@@ -4,6 +4,7 @@ import { callN8n } from "../../../lib/n8n";
 import {
   badRequest,
   getRequiredString,
+  normalizeSpreadsheetId,
   serverError,
   validateAnswersArray,
   validateContentLength,
@@ -13,7 +14,7 @@ import type { SubmitRequest } from "../../../types/quiz";
 export async function POST(req: NextRequest) {
   const payloadCheck = validateContentLength(req);
   if (!payloadCheck.ok) {
-    return badRequest(payloadCheck.error);
+    return badRequest((payloadCheck as { ok: false; error: string }).error);
   }
 
   try {
@@ -24,22 +25,22 @@ export async function POST(req: NextRequest) {
       ? { ok: true as const, value: cookieUserId }
       : getRequiredString(raw, "user_id");
     if (!userId.ok) {
-      return badRequest(userId.error);
+      return badRequest((userId as { ok: false; error: string }).error);
     }
 
     const quizId = getRequiredString(raw, "quiz_id");
     if (!quizId.ok) {
-      return badRequest(quizId.error);
+      return badRequest((quizId as { ok: false; error: string }).error);
     }
 
     const answers = validateAnswersArray(raw.answers);
     if (!answers.ok) {
-      return badRequest(answers.error);
+      return badRequest((answers as { ok: false; error: string }).error);
     }
 
     const body: SubmitRequest = {
-      user_id: userId.value,
-      quiz_id: quizId.value,
+      user_id: normalizeSpreadsheetId(userId.value),
+      quiz_id: normalizeSpreadsheetId(quizId.value),
       answers: answers.value,
     };
 

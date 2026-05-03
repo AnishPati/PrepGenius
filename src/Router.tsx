@@ -1,13 +1,13 @@
 "use client";
 
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Index from "./pages/Index";
-import Onboarding from "./pages/Onboarding";
-import Dashboard from "./pages/Dashboard";
-import Analytics from "./pages/Analytics";
-import Profile from "./pages/Profile";
-import Success from "./pages/Success";
-import NotFound from "./pages/NotFound";
+import Index from "./screens/Index";
+import Onboarding from "./screens/Onboarding";
+import Dashboard from "./screens/Dashboard";
+import Analytics from "./screens/Analytics";
+import Profile from "./screens/Profile";
+import Success from "./screens/Success";
+import NotFound from "./screens/NotFound";
 
 export default function Router() {
   return (
