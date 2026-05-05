@@ -236,7 +236,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="mx-auto max-w-5xl px-4 py-8 space-y-6">
           {[1, 2, 3, 4].map((i) => (
@@ -248,7 +248,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-8 space-y-8">
         {/* Header */}

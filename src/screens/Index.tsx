@@ -21,18 +21,16 @@ const Index = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="dark min-h-screen flex flex-col bg-transparent">
       {/* Navbar */}
-      <nav className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="mx-auto max-w-5xl flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-2 font-bold text-foreground">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Zap className="h-4 w-4 text-primary-foreground" />
-            </div>
-            PrepAI
+      <nav className="border-b border-white/10 bg-[#121010]/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="mx-auto max-w-5xl flex items-center justify-between px-4 h-20">
+          <div className="flex items-center gap-3 font-bold text-white text-2xl">
+            <img src="https://raw.githubusercontent.com/Aayush081sahay/PrepGenius/refs/heads/main/AIIIIII.svg" alt="PrepGenius" className="h-10 w-10 invert" />
+            PrepGenius
           </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/onboarding")}>
-            Sign In
+          <Button variant="ghost" size="lg" onClick={() => navigate("/onboarding")} className="text-base font-medium hover:bg-white/10 hover:text-white">
+            Sign Up for Free
           </Button>
         </div>
       </nav>
@@ -46,23 +44,62 @@ const Index = () => {
             transition={{ duration: 0.5 }}
             className="max-w-2xl text-center space-y-6"
           >
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#00FFB2]/20 bg-[#00FFB2]/10 px-3 py-1 text-xs font-medium text-[#00FFB2]">
               <Star className="h-3 w-3" /> AI-Powered Interview Prep
             </div>
-            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-foreground leading-tight">
+            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
               Your AI Interview
               <br />
-              <span className="text-primary">Coach</span>
+              <span className="text-[#00FFB2]">Coach</span>
             </h1>
-            <p className="text-lg text-muted-foreground max-w-md mx-auto">
+            <p className="text-lg text-white/70 max-w-md mx-auto">
               Daily adaptive challenges. Real-time AI feedback. Track your progress and ace your next tech interview.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button size="lg" className="rounded-full px-8 text-base gap-2" onClick={() => navigate("/onboarding")}>
+              <Button size="lg" className="rounded-full px-8 text-base gap-2 bg-[#00FFB2] text-black hover:bg-[#00FFB2]/90" onClick={() => navigate("/onboarding")}>
                 Start Your Prep <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </motion.div>
+        </section>
+
+        {/* Company Marquee */}
+        <section className="w-full overflow-hidden border-y border-white/10 bg-white/5 py-6 mb-20">
+          <div className="flex w-max animate-marquee">
+            {[...Array(2)].map((_, idx) => (
+              <div key={idx} className="flex gap-6 px-3">
+                {[
+                  { name: "Persistent", domain: "persistent.com" },
+                  { name: "Simplilearn", domain: "simplilearn.com" },
+                  { name: "Texas Instruments", domain: "ti.com" },
+                  { name: "upGrad", domain: "upgrad.com" },
+                  { name: "whatfix", domain: "whatfix.com" },
+                  { name: "ZOHO", domain: "zoho.com" },
+                  { name: "Accenture", domain: "accenture.com" },
+                  { name: "BOSCH", domain: "bosch.com" },
+                  { name: "GaragePlug", domain: "garageplug.com" },
+                  { name: "Google", domain: "google.com" },
+                  { name: "Infosys", domain: "infosys.com" },
+                  { name: "KPMG", domain: "kpmg.com" },
+                  { name: "Amazon", domain: "amazon.com" },
+                  { name: "Microsoft", domain: "microsoft.com" },
+                  { name: "TCS", domain: "tcs.com" }
+                ].map((company) => (
+                  <div key={company.name} className="flex h-12 items-center justify-center gap-2 rounded bg-white px-8 font-bold text-black text-sm md:text-base shadow-sm whitespace-nowrap flex-shrink-0">
+                    <img 
+                      src={`https://logo.clearbit.com/${company.domain}`} 
+                      alt={`${company.name} logo`} 
+                      className="h-5 w-5 object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    {company.name}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* Features */}

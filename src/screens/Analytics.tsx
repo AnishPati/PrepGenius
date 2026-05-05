@@ -106,7 +106,7 @@ const Analytics = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="mx-auto max-w-5xl px-4 py-8 space-y-6">
           {[1, 2, 3].map((item) => (
@@ -133,7 +133,7 @@ const Analytics = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-8 space-y-8">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

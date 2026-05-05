@@ -19,10 +19,8 @@ const Navbar = () => {
           to="/"
           className="flex items-center gap-2 font-bold text-foreground"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Zap className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="hidden sm:inline">PrepAI</span>
+          <img src="https://raw.githubusercontent.com/Aayush081sahay/PrepGenius/refs/heads/main/AIIIIII.svg" alt="PrepGenius" className="h-8 w-8 invert" />
+          <span className="hidden sm:inline">PrepGenius</span>
         </Link>
         <div className="flex items-center gap-1">
           {navItems.map(({ path, label, icon: Icon }) => {
