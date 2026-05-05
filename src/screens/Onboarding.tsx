@@ -14,9 +14,19 @@ import { onboardUser } from "@/lib/api";
 import { Loader2, ArrowRight, ArrowLeft, Zap, Rocket, Building2, Briefcase, CheckCircle2, Brain, Code, BookOpen, MessageSquare } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const BRANCHES = ["Computer Science", "Information Technology", "Electronics", "Electrical", "Mechanical", "Civil", "Other"];
-const COMPANIES = ["Google", "Amazon", "Microsoft", "TCS", "Infosys", "Other"];
-const ROLES = ["SDE", "Data Analyst", "Core Engineer", "Product Manager", "Other"];
+const BRANCHES = ["Computer Science & Engineering", "Information Technology", "Electronics and Communication Engineering", "Electrical Engineering", "Mechanical Engineering", "Civil Engineering", "Chemical Engineering", "Biotechnology Engineering", "Food Technology Engineering", "Artificial Intelligence and Machine learning", "Data Science", "Cyber Security", "Other"];
+const COMPANIES = [
+  "Google", "Amazon", "Microsoft", "Meta", "Apple", "Netflix",
+  "Zoho", "Persistent", "Simplilearn", "Accenture", "Infosys",
+  "TCS", "KPMG", "Bosch", "Adobe", "Cisco", "Oracle", "Other"
+];
+const ROLES = [
+  "Software Development Engineer (SDE)", "Frontend Developer",
+  "Backend Developer", "Full Stack Developer", "Data Scientist",
+  "Data Analyst", "QA Engineer", "Tester / SDET", "DevOps Engineer",
+  "Cloud Engineer", "Product Manager", "Business Analyst",
+  "Core Engineer", "Other"
+];
 
 const CHALLENGE_BREAKDOWN = [
   { icon: Brain, label: "Aptitude", count: 3, color: "text-primary" },
@@ -35,6 +45,7 @@ const STEPS = [
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  console.log("Onboarding loaded with new arrays:", { BRANCHES, COMPANIES, ROLES });
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -79,24 +90,22 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex items-center justify-center gap-2 font-bold text-foreground">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Zap className="h-4 w-4 text-primary-foreground" />
-          </div>
-          PrepAI
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
+      <div className="w-full max-w-2xl space-y-8">
+        <div className="flex items-center justify-center gap-4 font-bold text-foreground text-4xl mb-4">
+          <img src="https://raw.githubusercontent.com/Aayush081sahay/PrepGenius/refs/heads/main/AIIIIII.svg" alt="PrepGenius" className="h-14 w-14 invert" />
+          PrepGenius
         </div>
 
-        <div className="space-y-2">
-          <div className="flex justify-between text-xs text-muted-foreground">
+        <div className="space-y-3">
+          <div className="flex justify-between text-sm md:text-base text-muted-foreground font-medium">
             <span>Step {step + 1} of {STEPS.length}</span>
             <span>{STEPS[step].title}</span>
           </div>
           <Progress value={progress} className="h-1.5" />
         </div>
 
-        <Card className="border shadow-sm">
+        <Card className="relative z-10 w-full overflow-visible">
           <CardContent className="pt-6">
             <AnimatePresence mode="wait">
               <motion.div
@@ -107,18 +116,18 @@ const Onboarding = () => {
                 transition={{ duration: 0.2 }}
                 className="space-y-5"
               >
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">{STEPS[step].title}</h2>
-                  <p className="text-sm text-muted-foreground">{STEPS[step].subtitle}</p>
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold text-foreground">{STEPS[step].title}</h2>
+                  <p className="text-lg text-muted-foreground mt-2">{STEPS[step].subtitle}</p>
                 </div>
 
                 {step === 0 && (
                   <>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2.5">
                       <Label htmlFor="name">Name</Label>
                       <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" />
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2.5">
                       <Label htmlFor="email">Email</Label>
                       <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" />
                     </div>
@@ -127,7 +136,7 @@ const Onboarding = () => {
 
                 {step === 1 && (
                   <>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2.5">
                       <Label>Branch</Label>
                       <Select value={branch} onValueChange={setBranch}>
                         <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
@@ -136,7 +145,7 @@ const Onboarding = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2.5">
                       <Label htmlFor="cgpa">CGPA</Label>
                       <Input id="cgpa" type="number" step="0.01" min="0" max="10" value={cgpa} onChange={(e) => setCgpa(e.target.value)} placeholder="8.5" />
                     </div>
@@ -145,7 +154,7 @@ const Onboarding = () => {
 
                 {step === 2 && (
                   <>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2.5">
                       <Label className="flex items-center gap-1.5">
                         <Building2 className="h-4 w-4 text-muted-foreground" /> Target Company
                       </Label>
@@ -161,7 +170,7 @@ const Onboarding = () => {
                         </motion.div>
                       )}
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2.5">
                       <Label className="flex items-center gap-1.5">
                         <Briefcase className="h-4 w-4 text-muted-foreground" /> Job Role
                       </Label>
@@ -183,7 +192,7 @@ const Onboarding = () => {
                         {(["easy", "medium", "hard"] as const).map((d) => (
                           <div key={d} className="flex items-center gap-1.5">
                             <RadioGroupItem value={d} id={`diff-${d}`} />
-                            <Label htmlFor={`diff-${d}`} className="capitalize cursor-pointer text-sm font-normal">{d}</Label>
+                            <Label htmlFor={`diff-${d}`} className="capitalize cursor-pointer text-base font-normal">{d}</Label>
                           </div>
                         ))}
                       </RadioGroup>
@@ -194,7 +203,7 @@ const Onboarding = () => {
                 {step === 3 && (
                   <div className="space-y-4">
                     <div className="rounded-2xl bg-primary/5 border border-primary/10 p-5 space-y-4">
-                      <p className="text-sm font-medium text-foreground text-center">
+                      <p className="text-base font-medium text-foreground text-center">
                         Your daily AI challenge will include:
                       </p>
                       <div className="space-y-2.5">
@@ -204,7 +213,7 @@ const Onboarding = () => {
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.08 }}
-                            className="flex items-center justify-between text-sm"
+                            className="flex items-center justify-between text-base"
                           >
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <item.icon className={`h-4 w-4 ${item.color}`} />

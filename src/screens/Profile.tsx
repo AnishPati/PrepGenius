@@ -52,7 +52,7 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-transparent">
         <Navbar />
         <main className="mx-auto max-w-5xl px-4 py-8 space-y-6">
           {[1, 2, 3].map((i) => (
@@ -64,7 +64,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-8 space-y-8">
         {/* Header */}

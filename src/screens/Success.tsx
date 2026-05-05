@@ -24,7 +24,7 @@ const Success = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-transparent relative overflow-hidden">
       {/* Confetti */}
       {particles.map((p) => (
         <motion.div
